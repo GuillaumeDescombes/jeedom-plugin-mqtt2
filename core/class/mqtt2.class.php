@@ -633,6 +633,24 @@ class mqtt2 extends eqLogic {
       return $infos;
    }
 
+   /* modif by GDE */
+   public static function searchRec($tempTopic, $tempMessage) {
+      foreach ($tempMessage as $key => $value) {
+         log::add(__CLASS__, 'debug', "looking for LogicalId = " . $tempTopic . '/' . $key);
+         $eqlogics = self::byLogicalId($tempTopic . '/' . $key, __CLASS__, true);
+         if (count($eqlogics) != 0) {
+           self::handleMqttSubMessage($eqlogics, $value);
+         } else {
+           if (is_array($value)) {
+             self::searchRec($tempTopic . '/' . $key, $value);
+           } else {
+             log::add(__CLASS__, 'debug', "--> no found");
+           }
+         }
+       }
+   }
+   /* end of modif */
+
    public static function handleMqttMessage($_message) {
       log::add(__CLASS__, 'debug', __('Message reçu sans prise en charge par un plugin', __FILE__) . ' : ' . json_encode($_message));
       foreach ($_message as $topic => $message) {
@@ -685,12 +703,19 @@ class mqtt2 extends eqLogic {
          if (count($eqlogics) != 0) {
             self::handleMqttSubMessage($eqlogics, $message);
          }
+
+         /* modif by GDE */
+         //add recursive
+         self::searchRec($topic, $message);
+         /*
          foreach ($message as $key => $value) {
             $eqlogics = self::byLogicalId($topic . '/' . $key, __CLASS__, true);
             if (count($eqlogics) != 0) {
                self::handleMqttSubMessage($eqlogics, $value);
             }
          }
+         */
+         /* end of modif */
 
          if (isset($message['eqLogic']) && isset($message['eqLogic']['battery'])) {
             $eqLogics = self::byType('mqtt2',true);
